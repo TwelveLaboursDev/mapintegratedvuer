@@ -1,7 +1,9 @@
 // Primary colors
-$purple: #00467F;
+$purple: #8300BF;
 $darkBlue: #24245B;
 $grey: #303133;
+$twelveBlue: #00467F;
+
 
 // Secondary colors
 $lightPurple: #BC00FC;
@@ -28,7 +30,7 @@ $cochlear: #FFFFFF;
 //Search box colors
 $darkGrey: #606266;
 
-$app-primary-color: $purple !default;
+$app-primary-color: $twelveBlue !default;
 $app-secondary-color: $darkBlue !default;
 $text-color: $grey !default;
 $input-text: $grey !default;
