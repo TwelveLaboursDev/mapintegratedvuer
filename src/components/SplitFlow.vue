@@ -34,6 +34,7 @@
           :open-at-start="startUp"
           @actionClick="actionClick"
           @tabClicked="tabClicked"
+          :alternate-search="alternateSearch"
           @search-changed="searchChanged($event)"
         />
       </div>
@@ -66,6 +67,11 @@ export default {
     DialogToolbarContent,
     SplitDialog,
     SideBar,
+  },
+  inject: {
+    'alternateSearch' : {
+      default: undefined,
+    },
   },
   props: {
     state: {
