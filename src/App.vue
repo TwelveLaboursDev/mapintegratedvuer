@@ -34,6 +34,7 @@
 <script>
 /* eslint-disable no-alert, no-console */
 import MapContent from './components/MapContent.vue';
+import { mySearch } from './demo/AlternateResponse.js'
 import Vue from "vue";
 import {
   Button,
@@ -51,13 +52,18 @@ export default {
   components: {
     MapContent
   },
+  provide: function() {
+    return {
+      alternateSearch: this.alternateSearch
+    }
+  },
   data: function() {
     return {
       uuid: undefined,
       state: undefined,
       prefix: "/map",
-      api: process.env.VUE_APP_API_LOCATION,
       mapSettings: [],
+      alternateSearch: mySearch
     }
   },
   computed: {
