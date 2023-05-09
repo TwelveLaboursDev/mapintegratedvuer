@@ -336,6 +336,7 @@ export default {
         PENNSIEVE_API_LOCATION: store.state.settings.pennsieveApi,
         NL_LINK_PREFIX: store.state.settings.nlLinkPrefix,
         ROOT_URL: store.state.settings.rootUrl,
+        QUERY_URL: store.state.settings.queryUrl,
       };
     },
   },

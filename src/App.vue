@@ -82,6 +82,7 @@ export default {
         flatmapAPI: process.env.VUE_APP_FLATMAPAPI_LOCATION,
         nlLinkPrefix: process.env.VUE_APP_NL_LINK_PREFIX,
         rootUrl: process.env.VUE_APP_ROOT_URL,
+        queryUrl: process.env.VUE_APP_QUERY_URL,
       }
     }
   },
