@@ -180,6 +180,7 @@ export default {
       this.options.flatmapAPI ? store.commit("settings/updateFlatmapAPI", this.options.flatmapAPI) : null,
       this.options.nlLinkPrefix ? store.commit("settings/updateNLLinkPrefix", this.options.nlLinkPrefix) : null
       this.options.rootUrl ? store.commit("settings/updateRootUrl", this.options.rootUrl) : null
+      this.options.queryUrl ? store.commit("settings/updateQueryUrl", this.options.queryUrl) : null
     }
   },
   mounted: function() {

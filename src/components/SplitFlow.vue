@@ -48,7 +48,7 @@ import DialogToolbarContent from "./DialogToolbarContent";
 import EventBus from "./EventBus";
 import SplitDialog from "./SplitDialog";
 // import contextCards from './context-cards'
-import { SideBar } from "@abi-software/map-side-bar/src/components/index.js";
+import { SideBar } from "@12-labours/map-side-bar/src/components/index.js";
 import { capitalise, initialState } from "./scripts/utilities.js";
 import store from "../store";
 import Vue from "vue";
@@ -336,6 +336,7 @@ export default {
         PENNSIEVE_API_LOCATION: store.state.settings.pennsieveApi,
         NL_LINK_PREFIX: store.state.settings.nlLinkPrefix,
         ROOT_URL: store.state.settings.rootUrl,
+        QUERY_URL: store.state.settings.queryUrl,
       };
     },
   },
