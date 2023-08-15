@@ -7,11 +7,13 @@
     style="height: 100%; width: 100%"
     :minZoom="entry.minZoom"
     :helpMode="helpMode"
-    :pathControls="entry.pathControls"
+    :pathControls="true"
     ref="flatmap"
     @ready="getAvailableTerms"
-    :displayMinimap="true"
+    :displayMinimap="false"
+    :displayWarning="true"
     :flatmapAPI="flatmapAPI"
+    :sparcAPI="apiLocation"
   />
 </template>
 
@@ -94,10 +96,9 @@ export default {
 <!-- Add "scoped" attribute to limit CSS to this component only -->
 <style scoped lang="scss">
 ::v-deep .flatmapvuer-popover {
-  .mapboxgl-popup-content {
+  .maplibregl-popup-content {
     border-radius: 4px;
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
-    padding: 3em 1em 3em 1em;
     pointer-events: auto;
     width: 25em;
     background: #fff;
