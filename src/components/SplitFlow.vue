@@ -12,6 +12,9 @@
         :showIcons="entries[findIndexOfId(activeDockedId)].mode !== 'main'"
         @onFullscreen="onFullscreen"
         :showHelpIcon="true"
+        @local-search="onDisplaySearch"
+        @fetch-suggestions="fetchSuggestions"
+        ref="dialogToolbar"
       />
     </el-header>
     <el-main class="dialog-main">
@@ -48,7 +51,7 @@ import EventBus from "./EventBus";
 import SplitDialog from "./SplitDialog";
 // import contextCards from './context-cards'
 import { SideBar } from "@12-labours/map-side-bar/src/components/index.js";
-import { capitalise, initialDefaultState } from "./scripts/utilities.js";
+import { capitalise, getNewMapEntry, initialDefaultState } from "./scripts/utilities.js";
 import store from "../store";
 import Vue from "vue";
 import { Container, Header, Main } from "element-ui";
@@ -137,6 +140,34 @@ export default {
         }
       }
     },
+    onDisplaySearch: function (payload) {
+      let searchFound = false;
+      //Search all active viewers when global callback is on
+      let splitdialog = this.$refs.splitdialog;
+      if (splitdialog) {
+        const activeContents = splitdialog.getActiveContents();
+        activeContents.forEach(content => {
+          if (content.search(payload.term)) {
+            searchFound = true;
+          }
+        });
+      }
+      this.$refs.dialogToolbar.setFailedSearch(searchFound ? undefined : payload.term);
+    },
+    fetchSuggestions: function(payload) {
+      const suggestions = [];
+      //Search all active viewers when global callback is on
+      let splitdialog = this.$refs.splitdialog;
+      const activeContents = splitdialog.getActiveContents();
+      //Push new suggestions into the pre-existing suggestions array
+      activeContents.forEach(content => content.searchSuggestions(payload.data.term, suggestions));
+      const unique = new Set(suggestions);
+      suggestions.length = 0;
+      for (const item of unique) {
+        suggestions.push({"value": "\"" + item +"\""});
+      }
+      payload.data.cb(suggestions);
+    },
     searchChanged: function (data) {
       if (data && data.type == "query-update") {
         this.search = data.value;
@@ -218,6 +249,10 @@ export default {
       if (index > -1) {
         this.entries.splice(index, 1);
       }
+    },
+    openNewMap: async function (type) {
+      const entry = await getNewMapEntry(type, store.state.settings.sparcApi);
+      this.createNewEntry(entry);
     },
     openSearch: function (facets, query) {
       // Keep the species facets currently unused
@@ -319,6 +354,9 @@ export default {
     });
     EventBus.$on("PopoverActionClick", payload => {
       this.actionClick(payload);
+    });
+    EventBus.$on("OpenNewMap", type => {
+      this.openNewMap(type);
     });
     this.$nextTick(() => {
       if (this.search === "" && this._facets.length === 0) {
