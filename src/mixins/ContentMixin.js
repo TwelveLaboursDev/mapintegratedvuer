@@ -5,7 +5,7 @@ import {
   getParentsRegion,
 } from "../components/SimulatedData.js";
 import EventBus from "../components/EventBus";
-import markerZoomLevels from "../components/markerZoomLevels";
+import markerZoomLevels from "../components/markerZoomLevelsHardCoded.js";
 import store from "../store";
 
 /* eslint-disable no-alert, no-console */
@@ -41,6 +41,13 @@ export default {
     },
     getState: function () {
       return undefined;
+    },
+    openMap: function (type) {
+      if (type === "SYNC") {
+        this.toggleSyncMode();
+      } else {
+        EventBus.$emit("OpenNewMap", type);
+      }
     },
     /**
      * Perform a local search on this contentvuer
