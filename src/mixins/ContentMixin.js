@@ -5,7 +5,7 @@ import {
   getParentsRegion,
 } from "../components/SimulatedData.js";
 import EventBus from "../components/EventBus";
-import markerZoomLevels from "../components/markerZoomLevels";
+import markerZoomLevels from "../components/markerZoomLevelsHardCoded.js";
 import store from "../store";
 
 /* eslint-disable no-alert, no-console */
@@ -41,6 +41,13 @@ export default {
     },
     getState: function () {
       return undefined;
+    },
+    openMap: function (type) {
+      if (type === "SYNC") {
+        this.toggleSyncMode();
+      } else {
+        EventBus.$emit("OpenNewMap", type);
+      }
     },
     /**
      * Perform a local search on this contentvuer
@@ -162,6 +169,9 @@ export default {
       if (slot) return store.getters["splitFlow/isSlotActive"](slot);
       return false;
     },
+    displayTooltip: function() {
+      return;
+    },
     /**
      * Get the term to zoom/highlight in a synchronisation event,
      * if it cannot be found in the map, it will perform several
@@ -277,7 +287,8 @@ export default {
       if (data.eventType === "highlighted") {
         this.highlightFeatures(info);
       } else if (data.eventType === "selected") {
-        this.zoomToFeatures(info, true);
+        this.displayTooltip(info);
+        //this.zoomToFeatures(info, true);
       }
     },
     /**
@@ -292,7 +303,7 @@ export default {
     receiveSynchronisedEvent: async function (data) {
       if (data.paneIndex !== this.entry.id) {
         if (data.eventType == "panZoom") {
-          this.handleSyncPanZoomEvent(data);
+          //this.handleSyncPanZoomEvent(data);
         } else {
           this.handleSyncMouseEvent(data);
         }

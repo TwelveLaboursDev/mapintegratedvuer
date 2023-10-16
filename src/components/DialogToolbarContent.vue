@@ -1,5 +1,10 @@
 <template>
-  <div :class="[{'draggable':  topLevelControls ==  false}, 'header']">
+  <div class="header">
+    <search-controls
+      @search="$emit('local-search', {term: $event});"
+      @fetch-suggestions="$emit('fetch-suggestions', {data: $event});"
+      :failedSearch="failedSearch"
+    />
     <div class="switch-control">
       <el-switch
         v-if="syncMode"
@@ -52,7 +57,7 @@
       <el-popover class="tooltip"  content="Split screen" placement="bottom-end"
         :open-delay="helpDelay" :appendToBody=false trigger="hover"
         popper-class="header-popper"
-        v-show="topLevelControls">
+      >
         <map-svg-icon :icon="activeView"
           v-popover:viewPopover
           :class="[{'disabled': (1 >= numberOfEntries)},
@@ -63,12 +68,12 @@
         :appendToBody=false trigger="hover" popper-class="header-popper" v-show="showHelpIcon" >
         <map-svg-icon icon="tooltips" slot="reference" class="header-icon" @click.native="startHelp()"/>
       </el-popover>
-      <el-popover v-show="!isFullscreen && topLevelControls" class="tooltip"
+      <el-popover v-show="!isFullscreen" class="tooltip"
         content="Fullscreen" placement="bottom-end" :open-delay="helpDelay"
         :appendToBody=false trigger="hover" popper-class="header-popper">
           <map-svg-icon icon="fullScreen"  slot="reference" class="header-icon" @click.native="onFullscreen"/>
       </el-popover>
-      <el-popover v-show="isFullscreen && topLevelControls" class="tooltip"
+      <el-popover v-show="isFullscreen" class="tooltip"
         content="Exit fullscreen" placement="bottom-end" :open-delay="helpDelay"
         :appendToBody=false trigger="hover" popper-class="header-popper">
           <map-svg-icon icon="closeFullScreen" slot="reference" class="header-icon"
@@ -110,7 +115,7 @@
       <el-popover class="tooltip"  content="Get permalink" placement="bottom-end"
         :open-delay="helpDelay" :appendToBody=false trigger="hover"
         popper-class="header-popper"
-        v-show="topLevelControls && shareLink">
+        v-show="shareLink">
         <map-svg-icon icon="permalink"
           v-popover:linkPopover
           class="header-icon"
@@ -132,6 +137,7 @@ import Vue from "vue";
 import EventBus from './EventBus';
 import store from '../store';
 import {MapSvgIcon} from '@abi-software/svg-sprite';
+import SearchControls from './SearchControls';
 
 import {
   Button,
@@ -159,6 +165,7 @@ export default {
   name: "DialogToolbarContent",
   components: {
     MapSvgIcon,
+    SearchControls,
   },
   props: {
     /**
@@ -175,10 +182,6 @@ export default {
       type: Boolean,
       default: true
 
-    },
-    topLevelControls: {
-      type: Boolean,
-      default: true
     },
     /**
      * The current active title.
@@ -233,6 +236,7 @@ export default {
       loadingLink: true,
       shareLinkDisplay: false,
       independent: true,
+      failedSearch: undefined,
     }
   },
   methods: {
@@ -254,6 +258,9 @@ export default {
         this.$refs.linkInput.$el.querySelector("input").select();
         document.execCommand('copy');
       }
+    },
+    setFailedSearch: function(result) {
+      this.failedSearch = result;
     },
     getShareLink: function() {
       this.loadingLink = true;
@@ -316,14 +323,6 @@ export default {
 
 .header {
   height:32px;
-}
-
-.draggable.header:hover {
-  cursor:grab;
-}
-
-.draggable.header:active {
-  cursor:grabbing;
 }
 
 ::v-deep .header-popper {

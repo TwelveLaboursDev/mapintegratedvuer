@@ -1,6 +1,5 @@
 /* eslint-disable no-alert, no-console */
-import { mount } from '@cypress/vue';
-import { MapContent } from '../../../src/components/index.js';
+import { MapContent } from '../../src/components/index.js';
 
 describe('MapContent', () => {
 
@@ -10,6 +9,7 @@ describe('MapContent', () => {
     cy.fixture('scaffoldMetadata.json').as('metadata');
     cy.fixture('scaffoldPrimitive.json').as('primitive');
     cy.fixture('stubResponse.json').as('stub');
+    cy.fixture('simulation_ui.json').as('simulation_ui');
   })
   
   it('Workflow testing', () => {
@@ -21,12 +21,20 @@ describe('MapContent', () => {
 
       cy.intercept('/sparc-api/dataset_info/using_multiple_dois/?dois=*', {statusCode: 200, body: stub.resultResponse}).as("mouseDataset");
     
-      cy.intercept('/sparc-api/get-organ-curies?', {statusCode: 200, body: stub.curiesResponse}).as("curieResponse");
+      cy.intercept('/sparc-api/get-organ-curies', {statusCode: 200, body: stub.curiesResponse}).as("curieResponse");
+
+      cy.intercept('/sparc-api/get_featured_datasets_identifiers', {statusCode: 200, body: stub.featuredDatasetResponse}).as("featuredDatasetResponse");
+
+      const anatomy_dataset = {
+        "result": [stub.datasetResult]
+      };
+
+      cy.intercept('/sparc-api/dataset_info/anatomy?identifier=130', {statusCode: 200, body: anatomy_dataset}).as("anatomyResponse");
     })
 
     //cy.intercept('GET', 'https://mapcore-demo.org/current/flatmap/v2/**');
     
-    mount(MapContent, {
+    cy.mount(MapContent, {
       propsData: {
         options: {
           sparcApi: "https://mock-test/sparc-api/",
@@ -53,7 +61,7 @@ describe('MapContent', () => {
       'have.attr', 'style', 'height: 880px');
 
     //Loading mask should exist at the beginning
-    cy.get('.multi-container > .el-loading-parent--relative > .el-loading-mask', {timeout: 20000}).should('exist');
+    cy.get('.multi-container > .el-loading-parent--relative > .el-loading-mask', {timeout: 30000}).should('exist');
 
     cy.get('.header').should('be.visible');
 
@@ -68,33 +76,43 @@ describe('MapContent', () => {
     //Wait for curie response
     cy.wait('@curieResponse', {timeout: 20000});
 
+    //Wait for curie response
+    cy.wait('@featuredDatasetResponse', {timeout: 20000});
+
+    //Wait for curie response
+    cy.wait('@anatomyResponse', {timeout: 20000});
+
+    cy.get('.multi-container > .el-loading-parent--relative > .el-loading-mask', {timeout: 30000}).should('not.exist');
+
+    //Test the existence of the minimap
+    cy.get('#maplibre-minimap > .maplibregl-canvas-container > .maplibregl-canvas').should('exist');
+
     //Search for non existance feature, expect not-found text
-    cy.get('.search-box > .el-input__inner').should('exist').type("NON_EXISTANCE");
-    cy.get('.toolbar-flex-container > .map-icon > use').should('exist').click();
+    cy.get('.el-autocomplete > .el-input > .el-input__inner').should('exist').type("NON_EXISTANCE");
+    cy.get('.search-container > .map-icon > use').should('exist').click();
     cy.get('.not-found-text').should('exist');
 
     //Search for Vague nerve, expect not-found text to be gone
-    cy.get('.search-box > .el-input__inner').should('exist').clear().type("'Vagus Nerve'");
-    cy.get('.toolbar-flex-container > .map-icon > use').should('exist').click();
+    cy.get('.el-autocomplete > .el-input > .el-input__inner').should('exist').clear();
+    cy.get('.el-autocomplete > .el-input > .el-input__inner').should('exist').type("'Vagus Nerve'");
+    cy.get('.search-container > .map-icon > use').should('exist').click();
     cy.get('.not-found-text').should('not.exist');
 
-    //Intercept the request and stub it with preloaded fixture
-    cy.get('@metadata').then((metadata) => {
-      cy.intercept('/WholeBody/31-May-2021/ratBody/ratBody_syncmap_metadata.json',
-        {statusCode: 200, body: metadata});
-    })
-    
-    //Intercept the request and stub it with preloaded fixture
-    cy.get('@primitive').then((primitive) => {
-      cy.intercept('/WholeBody/31-May-2021/ratBody/cube_2.json',
-        {statusCode: 200, body: primitive}).as("scaffoldResponse");
-    })
-    
-    //Click on the Open 3D Scaffold button
-    cy.get('.content-container > .el-button').should('be.visible').click();
+    //Test searching with uberon id wich should display a pop up with anatomical name
+    cy.get('.el-autocomplete > .el-input > .el-input__inner').should('exist').clear();
+    cy.get('.el-autocomplete > .el-input > .el-input__inner').should('exist').type("UBERON:0018675");
+    cy.get('.search-container > .map-icon > use').should('exist').click();
+    cy.get('.maplibregl-popup-content').should('exist').contains('pelvic splanchnic nerve');
+
+    //Test searching with uberon id wich should display a pop up with anatomical name
+    cy.get('[style="height: 100%;"] > [style="height: 100%; width: 100%; position: relative;"] > .settings-group > :nth-child(1)').should('exist').click();
+    cy.get('.open-map-popper > :nth-child(2) > .el-button:visible').should('exist').click();
+    cy.get('.singlepanel-1 > .toolbar-flex-container > .el-select > .el-input > .el-input__inner').should('exist').click();
+    cy.get('.singlepanel-1 > .toolbar-flex-container > .el-select > transition-stub > .el-select-dropdown > .el-scrollbar > .el-select-dropdown__wrap > .el-scrollbar__view>').should('have.length', 2);
+    cy.get('.singlepanel-1 > .toolbar-flex-container > .el-select > transition-stub > .el-select-dropdown > .el-scrollbar > .el-select-dropdown__wrap > .el-scrollbar__view> :nth-child(1)').click();
 
     //Check for two content containers
-    cy.get('.content-container').should('have.length', 2);
+    cy.get('.contentvuer').should('be.visible').should('have.length', 2);
 
     //Wait for the mouse dataset request
     cy.wait('@mouseDataset', {timeout: 20000});
@@ -112,17 +130,17 @@ describe('MapContent', () => {
     cy.get('.dataset-card').should('have.length', 1);
 
     //Check how many tags in the dataset
-    cy.get('.box-card .container button').should('have.length', 5);
+    cy.get('.box-card .container button').should('have.length', 6);
 
     //Intercept the request and stub it with preloaded fixture
     cy.get('@metadata').then((metadata) => {
-      cy.intercept('/sparc-api/s3-resource/999/1/files/derivative/sub-54-8/scaffold/54-8_metadata.json',
+      cy.intercept('/sparc-api/s3-resource/999/1/files/derivative/sub-54-8/scaffold/54-8_metadata.json?s3BucketName=pennsieve-prod-discover-publish-use1',
         {statusCode: 200, body: metadata});
     })
     
     //Intercept the request and stub it with preloaded fixture
     cy.get('@primitive').then((primitive) => {
-      cy.intercept('/sparc-api/s3-resource/999/1/files/derivative/sub-54-8/scaffold/cube_2.json',
+      cy.intercept('/sparc-api/s3-resource/999/1/files/derivative/sub-54-8/scaffold/cube_2.json?s3BucketName=pennsieve-prod-discover-publish-use1',
         {statusCode: 200, body: primitive}).as("scaffoldResponse");
     })
 
@@ -132,7 +150,7 @@ describe('MapContent', () => {
     cy.get('.box-card :nth-child(1) > .details .el-button').click();
     cy.get('.singlepanel-1.contentvuer').should('have.length', 1);
     cy.get('.singlepanel-1 > .toolbar-flex-container > .el-select > .el-input > .el-input__inner').should('exist').click();
-    cy.get('.singlepanel-1 .el-scrollbar__view >').should('have.length', 3);
+    cy.get('.singlepanel-1 > .toolbar-flex-container > .el-select > transition-stub > .el-select-dropdown > .el-scrollbar > .el-select-dropdown__wrap > .el-scrollbar__view> ').should('have.length', 3);
 
     //Check for segmentations and open it, should have four items in select now
     cy.get('.box-card .container button').contains('Segmentations (1)').click();
@@ -141,13 +159,18 @@ describe('MapContent', () => {
     cy.get('.gallery-strip').contains('RAGP_4subs_negdct.csv').should("exist");
     cy.get('.box-card :nth-child(1) > .details .el-button').click();
     cy.get('.singlepanel-1 > .toolbar-flex-container > .el-select > .el-input > .el-input__inner').should('exist').click();
-    cy.get('.singlepanel-1 .el-scrollbar__view >').should('have.length', 4);
+    cy.get('.singlepanel-1 > .toolbar-flex-container > .el-select > transition-stub > .el-select-dropdown > .el-scrollbar > .el-select-dropdown__wrap > .el-scrollbar__view> ').should('have.length', 4);
+
+    cy.get('@simulation_ui').then((simulation_ui) => {
+      cy.intercept('/sparc-api//sim/dataset/999',
+        {statusCode: 200, body: simulation_ui});
+    })
 
     //Check for simulations and open it, should have five items in select now
     cy.get('.box-card .container button').contains('Simulations (1)').click();
     cy.get('.box-card :nth-child(1) > .details .el-button').click();
     cy.get('.singlepanel-1 > .toolbar-flex-container > .el-select > .el-input > .el-input__inner').should('exist').click();
-    cy.get('.singlepanel-1 .el-scrollbar__view >').should('have.length', 5);
+    cy.get('.singlepanel-1 > .toolbar-flex-container > .el-select > transition-stub > .el-select-dropdown > .el-scrollbar > .el-select-dropdown__wrap > .el-scrollbar__view> ').should('have.length', 5);
 
     //Close the sidebar
     cy.get('.close-tab').should('exist').click();
@@ -159,6 +182,5 @@ describe('MapContent', () => {
     cy.get('.icon-group.el-row .el-popover:visible .el-row').should('have.length', 5);
     cy.get('.icon-group.el-row .el-popover:visible .el-row').contains('Four panes').should('exist').click();
     cy.get('.content-container:visible').should('have.length', 4);
-
   })
 })

@@ -3,26 +3,33 @@
     :state="entry.state"
     :entry="entry.resource"
     @resource-selected="resourceSelected(entry.type, $event)"
+    @pan-zoom-callback="flatmapPanZoomCallback"
     :name="entry.resource"
     style="height: 100%; width: 100%"
     :minZoom="entry.minZoom"
     :helpMode="helpMode"
-    :pathControls="entry.pathControls"
+    :pathControls="true"
     ref="flatmap"
-    @ready="getAvailableTerms"
-    :displayMinimap="true"
+    @ready="flatmapReadyCall"
+    :displayMinimap="false"
+    :displayWarning="true"
+    :enableOpenMapUI="true"
     :flatmapAPI="flatmapAPI"
+    :sparcAPI="apiLocation"
+    @open-map="openMap"
   />
 </template>
 
 <script>
 /* eslint-disable no-alert, no-console */
 import { FlatmapVuer } from "@abi-software/flatmapvuer/src/components/index.js";
+import EventBus from "../EventBus";
 import ContentMixin from "../../mixins/ContentMixin";
+import DynamicMarkerMixin from "../../mixins/DynamicMarkerMixin";
 import store from "../../store";
 export default {
   name: "Flatmap",
-  mixins: [ ContentMixin ],
+  mixins: [ ContentMixin, DynamicMarkerMixin ],
   components: {
     FlatmapVuer,
   },
@@ -35,6 +42,15 @@ export default {
      */
     search: function (term) {
       return this.$refs.flatmap.searchAndShowResult(term);
+    },
+    getFlatmapImp() {
+      return this.$refs.flatmap.mapImp;
+    },
+    flatmapReadyCall: function (flatmap) {
+      this.getAvailableTerms();
+      if (this.entry.resource === "FunctionalConnectivity"){
+        this.flatmapReadyForMarkerUpdates(flatmap);
+      }
     },
     highlightFeatures: function(info) {
       let name = info.name;
@@ -87,6 +103,9 @@ export default {
   },
   mounted: function() {
     this.getAvailableTerms();
+    EventBus.$on("markerUpdate", () => {
+      this.flatmapMarkerZoomUpdate(true, undefined);
+    });
   },
 };
 </script>
@@ -94,10 +113,9 @@ export default {
 <!-- Add "scoped" attribute to limit CSS to this component only -->
 <style scoped lang="scss">
 ::v-deep .flatmapvuer-popover {
-  .mapboxgl-popup-content {
+  .maplibregl-popup-content {
     border-radius: 4px;
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
-    padding: 3em 1em 3em 1em;
     pointer-events: auto;
     width: 25em;
     background: #fff;

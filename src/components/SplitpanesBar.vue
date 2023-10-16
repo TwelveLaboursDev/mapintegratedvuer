@@ -26,19 +26,12 @@
         <div v-else class="text title">
           {{ getEntryTitle(entries[0]) }}
         </div>
-        <template v-if="isFlatmap[slot.name]">
-          <search-controls 
-            @search="$emit('local-search', {term: $event, slot: slot});"
-            @fetch-suggestions="$emit('fetch-suggestions', {data: $event, slot: slot});"
-            :failedSearch="failedSearch[slot.name]"
-          />
-        </template>
       </div>
       <el-row class="icon-group">
         <el-popover class="tooltip" content="Close and remove" placement="bottom-end" :open-delay="helpDelay"
           :appendToBody=false trigger="hover" popper-class="header-popper" >
           <map-svg-icon icon="close" slot="reference" class="header-icon"
-            v-if="(activeView !== 'singlepanel') && (isFlatmap[slot.name] == false)"
+            v-if="(activeView !== 'singlepanel') && (isSearchable[slot.name] == false)"
             @click.native="closeAndRemove(slot)"/>
         </el-popover>
       </el-row>
@@ -52,7 +45,6 @@
 import Vue from "vue";
 import EventBus from './EventBus';
 import store from "../store";
-import SearchControls from './SearchControls';
 import { Input, Option, Popover, Row, Select } from "element-ui";
 import lang from "element-ui/lib/locale/lang/en";
 import locale from "element-ui/lib/locale";
@@ -67,7 +59,6 @@ Vue.use(Row);
 export default {
   name: "SplitpanesBar",
   components: {
-    SearchControls,
   },
   props: {
     entries: {
@@ -88,21 +79,10 @@ export default {
       type: Number,
       default: 50
     },
-    failedSearch: {
-      type: Object,
-      default: function() {
-        return {
-          first: undefined,
-          second: undefined,
-          third: undefined,
-          fourth: undefined,
-        };
-      }
-    }
   },
   data: function() {
     return {
-      isFlatmap: {
+      isSearchable: {
         first: true,
         second: false,
         third: false,
@@ -134,7 +114,7 @@ export default {
         let title = entry.label ? entry.label + " ": '';
         let type = entry.type;
         if (type == "Scaffold")
-          type = "Scaffold 3D";
+          type = "3D Scaffold";
         title += type;
         if (entry.datasetId)
           title += " (" + entry.datasetId + ")";
@@ -233,18 +213,18 @@ export default {
       }
       return style;
     },
-    updateIsFlatmapSlot: function(slot) {
+    updateisSearchableSlot: function(slot) {
       let entry = this.entries.find(entry => entry.id === slot.id);
       if (entry) {
-        if (entry.type == "Flatmap" || entry.type == "MultiFlatmap") {
-          this.isFlatmap[slot.name] = true;
+        if (entry.type == "Flatmap" || entry.type == "MultiFlatmap" || entry.type == "Scaffold") {
+          this.isSearchable[slot.name] = true;
         } else {
-          this.isFlatmap[slot.name] = false;
+          this.isSearchable[slot.name] = false;
         }
       }
     },
-    updateIsFlatmap: function() {
-      this.slotInfo.forEach( slot => this.updateIsFlatmapSlot(slot));
+    updateisSearchable: function() {
+      this.slotInfo.forEach( slot => this.updateisSearchableSlot(slot));
     },
     viewerChanged: function(slot, value) {
       if (slot.id && slot.id != value) {
@@ -263,7 +243,7 @@ export default {
   watch: {
     slotInfo: {
       handler: function() {
-        this.updateIsFlatmap();
+        this.updateisSearchable();
       },
       deep: true
     },

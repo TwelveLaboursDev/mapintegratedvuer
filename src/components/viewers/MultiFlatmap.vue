@@ -10,8 +10,12 @@
     :helpMode="helpMode"
     ref="multiflatmap"
     :displayMinimap="true"
+    :enableOpenMapUI="true"
+    :openMapOptions="openMapOptions"
     :flatmapAPI="flatmapAPI"
+    :sparcAPI="apiLocation"
     @pan-zoom-callback="flatmapPanZoomCallback"
+    @open-map="openMap"
   />
 </template>
 
@@ -22,68 +26,44 @@ import { MultiFlatmapVuer } from "@abi-software/flatmapvuer/src/components/index
 import ContentMixin from "../../mixins/ContentMixin";
 import EventBus from "../EventBus";
 import store from "../../store";
-import markerZoomLevels from "../markerZoomLevels";
+import { getBodyScaffold } from "../scripts/utilities";
+import DyncamicMarkerMixin from "../../mixins/DynamicMarkerMixin";
 
 import YellowStar from "../../icons/yellowstar";
 
-/*
- * Function to check markers visibility at the given zoom level.
- * I have modified it to make sure the marker is displayed
- * if the uberon is not present in the hardcoded zoom-level list.
- */
-const checkMarkersAtZoomLevel = (flatmapImp, markers, zoomLevel) => {
-  if (markers) {
-    markers.forEach(id => {
-      let foundInArray = false;
-      // First check if uberon is in the list, check for zoom level
-      // if true. Note: markerZoomLevels is imported.
-      for (let i = 0; i < markerZoomLevels.length; i++) {
-        if (markerZoomLevels[i].id === id) {
-          foundInArray = true;
-          if (zoomLevel >= markerZoomLevels[i].showAtZoom) {
-            flatmapImp.addMarker(id);
-          }
-          break;
-        }
-      }
-      // Did not match, add it regardless so we do not lose any
-      // markers.
-      if (!foundInArray) flatmapImp.addMarker(id);
-    });
+const getOpenMapOptions = (species) => {
+  const options = [
+    {
+      display: "Open AC Map",
+      key: "AC"
+    },
+    {
+      display: "Open FC Map",
+      key: "FC"
+    },
+    {
+      display: "Open 3D Human Map", 
+      key: "3D"
+    },
+  ]
+  switch (species) {
+    case "Human Male":
+    case "Human Female":
+    case "Rat":
+      options.push({
+        display: "Open Sync Map", 
+        key: "SYNC"
+      });
+      break;
+    default:
+      break;
   }
-};
-
-const extractS3BucketName = uri => {
-  if (uri) {
-    const substring = uri.split("//")[1]
-    if (substring) {
-      return substring.split("/")[0]
-    }
-  }
-  return undefined
-}
-
-const getBodyScaffold = async(sparcApi, species) => {
-  //Get body scaffold information
-  const response = await fetch(`${sparcApi}get_body_scaffold_info/${species}`);
-  if (response.ok) {
-    const data = await response.json();
-    //Construct the url endpoint for downloading the scaffold
-    const bucket = extractS3BucketName(data.s3uri);
-    return `${sparcApi}s3-resource/${data.id}/${data.version}/files/${data.path}?s3BucketName=${bucket}`;
-  } else {
-    //Use default url if data is not found for any reason
-    if (species === "rat") {
-      return "https://mapcore-bucket1.s3.us-west-2.amazonaws.com/WholeBody/31-May-2021/ratBody/ratBody_syncmap_metadata.json";
-    } else if (species === "human") {
-      return "https://mapcore-bucket1.s3.us-west-2.amazonaws.com/WholeBody/24-11-2022-human/humanBody_metadata.json";
-    }
-  }
+  return options;
 }
 
 export default {
   name: "MultiFlatmap",
-  mixins: [ContentMixin],
+  mixins: [ContentMixin, DyncamicMarkerMixin],
   components: {
     MultiFlatmapVuer,
   },
@@ -93,6 +73,7 @@ export default {
       flatmapReady: false,
       availableSpecies: availableSpecies(),
       scaffoldResource: { },
+      openMapOptions: getOpenMapOptions("Rat")
     }
   },
   methods: {
@@ -125,6 +106,7 @@ export default {
             title: "View 3D scaffold",
             layout: "2vertpanel",
             type: "SyncMap",
+            isBodyScaffold: true,
           };
         }
         if (action)
@@ -145,7 +127,7 @@ export default {
           payload: payload,
           type: this.entry.type,
         };
-        this.flatmapMarkerZoomUpdate(false);
+        this.flatmapMarkerZoomUpdate(false, undefined);
         this.$emit("resource-selected", result);
       }
     },
@@ -192,7 +174,7 @@ export default {
           this.$refs.multiflatmap
             .getCurrentFlatmap()
             .mapImp.panZoomTo(origin, [sW, sH]);
-          this.flatmapMarkerZoomUpdate(false);
+          this.flatmapMarkerZoomUpdate(false, undefined);
         }
       }
     },
@@ -239,46 +221,31 @@ export default {
     },
     flatmapChanged: async function (activeSpecies) {
       this.activeSpecies = activeSpecies;
+      this.openMapOptions = getOpenMapOptions(activeSpecies);
       this.$emit("species-changed", activeSpecies);
       if (!(this.entry.state && (this.entry.state.species === this.activeSpecies))) {
         if (this.syncMode == true)
           await this.toggleSyncMode();
       }
     },
-    multiFlatmapReady: function () {
-      this.$refs.multiflatmap.getCurrentFlatmap().enablePanZoomEvents(true); // Use zoom events for dynamic markers
-      this.flatmapReady = true;
-      this.flatmapMarkerZoomUpdate(true);
-    },
-    /**
-     * Function used for updating the flatmap markers.
-     * It will only update the markers if zoom level has changed or
-     * the force flag is true.
-     */
-    flatmapMarkerZoomUpdate(force) {
-      if (!this.flatmapReady) return;
-      let flatmapImp = this.getFlatmapImp();
-      let currentZoom = flatmapImp.getZoom()["zoom"];
-      if (force || this.zoomLevel !== currentZoom) {
-        this.zoomLevel = currentZoom;
-        flatmapImp.clearMarkers();
-        let markers = store.state.settings.markers;
-        checkMarkersAtZoomLevel(flatmapImp, markers, this.zoomLevel);
-        this.restoreFeaturedMarkers();
+    multiFlatmapReady: function (flatmap) {
+      if (flatmap) {
+        flatmap.enablePanZoomEvents(true); // Use zoom events for dynamic markers
+        this.flatmapReady = true;
+        const flatmapImp = flatmap.mapImp;
+        this.flatmapMarkerZoomUpdate(true, flatmapImp);
       }
     },
     getFlatmapImp: function () {
-      if (this.entry.type === "Flatmap") {
-        return this.$refs.flatmap.mapImp;
-      } else if (this.entry.type === "MultiFlatmap") {
+      if (this.entry.type === "MultiFlatmap") {
         return this.$refs.multiflatmap.getCurrentFlatmap()["mapImp"];
       } else {
         return undefined;
       }
     },
     flatmapAreaSearch() {
-      this.flatmapImp = this.getFlatmapImp();
-      let shownMarkers = this.flatmapImp.visibleMarkerAnatomicalIds();
+      const flatmapImp = this.getFlatmapImp();
+      let shownMarkers = flatmapImp.visibleMarkerAnatomicalIds();
       let returnedAction = {
         type: "Facets",
         label: "Unused",
@@ -286,41 +253,47 @@ export default {
       };
       EventBus.$emit("PopoverActionClick", returnedAction);
     },
-    restoreFeaturedMarkers: function () {
+    restoreFeaturedMarkers: function (flatmap) {
       store.commit("settings/resetFeaturedMarkerIdentifier");
       const markers = store.state.settings.featuredMarkers;
-      this.updateFeatureMarkers(markers);
+      this.updateFeatureMarkers(markers, flatmap);
     },
-    updateFeatureMarkers: function (markers) {
+    updateFeatureMarkers: function (markers, flatmap) {
       for (let index = 0; index < markers.length; ++index) {
         if (markers[index]) {
           const markerIdentifier =
             store.state.settings.featuredMarkerIdentifiers[index];
           if (!markerIdentifier) {
-            this.addFeaturedMarker(markers[index], index);
+            this.addFeaturedMarker(markers[index], index, flatmap);
           }
         }
       }
     },
-    addFeaturedMarker: function (marker, index) {
+    addFeaturedMarker: function (marker, index, flatmap) {
       const markerSpecies =
         store.getters["settings/featuredMarkerSpecies"](index);
       if (markerSpecies && !this.activeSpecies.startsWith(markerSpecies)) {
-        return;
+        return false;
+      }
+      let flatmapImp = flatmap;
+      if (!flatmapImp) {
+        flatmapImp = this.getFlatmapImp();
       }
 
-      const flatmapImp = this.getFlatmapImp();
+      if (flatmapImp) {
+        let wrapperElement = document.createElement("div");
+        wrapperElement.innerHTML = YellowStar;
 
-      let wrapperElement = document.createElement("div");
-      wrapperElement.innerHTML = YellowStar;
-
-      const markerIdentifier = flatmapImp.addMarker(marker, {
-        element: wrapperElement,
-      });
-      store.commit("settings/updateFeaturedMarkerIdentifier", {
-        index,
-        markerIdentifier,
-      });
+        const markerIdentifier = flatmapImp.addMarker(marker, {
+          element: wrapperElement,
+        });
+        store.commit("settings/updateFeaturedMarkerIdentifier", {
+          index,
+          markerIdentifier,
+        });
+        return true;
+      }
+      return false;
     },
   },
   computed: {
@@ -341,7 +314,7 @@ export default {
         return;
       }
 
-      this.updateFeatureMarkers(markers);
+      this.updateFeatureMarkers(markers, undefined);
     },
   },
   mounted: function () {
@@ -349,7 +322,7 @@ export default {
     this.getFeaturedDatasets();
 
     EventBus.$on("markerUpdate", () => {
-      this.flatmapMarkerZoomUpdate(true);
+      this.flatmapMarkerZoomUpdate(true, undefined);
     });
   },
 };

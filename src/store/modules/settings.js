@@ -11,6 +11,7 @@ const state = () => ({
   flatmapAPI: undefined,
   nlLinkPrefix: undefined,
   rootUrl: undefined,
+  queryUrl: undefined,
   facets: { species: [], gender: [], organ: [] },
   markers: [],
   featuredMarkers: [],
@@ -62,6 +63,9 @@ const mutations = {
   },
   updateRootUrl(state, rootUrl) {
     state.rootUrl = rootUrl;
+  },
+  updateQueryUrl(state, queryUrl) {
+    state.queryUrl = queryUrl;
   },
   updateMarkers(state, markers) {
     state.markers = markers;

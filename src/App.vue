@@ -20,13 +20,14 @@
           <el-button @click="setMultiFlatmap()" size="mini">Set MultiFlatmap</el-button>
           <el-button @click="setLegacyMultiFlatmap()" size="mini">Set Legacy MultiFlatmap</el-button>
           <el-button @click="setScaffold()" size="mini">Set To Scaffold</el-button>
+          <el-button @click="setFlatmap()" size="mini">Set Flatmap</el-button>
           <el-button @click="setSearch()" size="mini">Set Search</el-button>
         </el-row>
       </div>
       <el-button icon="el-icon-setting" slot="reference">Options</el-button>
     </el-popover>
     <div class="map-app">
-      <MapContent ref="map" :options="options" :state="state" :shareLink="shareLink" @updateShareLinkRequested="updateUUID"/>
+      <MapContent ref="map" :startingMap="startingMap" :options="options" :state="state" :shareLink="shareLink" @updateShareLinkRequested="updateUUID" @isReady="mapIsReady"/>
     </div>
   </div>
 </template>
@@ -34,6 +35,7 @@
 <script>
 /* eslint-disable no-alert, no-console */
 import MapContent from './components/MapContent.vue';
+import { mySearch } from './demo/AlternateResponse.js'
 import Vue from "vue";
 import {
   Button,
@@ -51,13 +53,19 @@ export default {
   components: {
     MapContent
   },
+  provide: function() {
+    return {
+      alternateSearch: this.alternateSearch
+    }
+  },
   data: function() {
     return {
       uuid: undefined,
       state: undefined,
       prefix: "/map",
-      api: process.env.VUE_APP_API_LOCATION,
       mapSettings: [],
+      alternateSearch: mySearch,
+      startingMap: "AC"
     }
   },
   computed: {
@@ -76,6 +84,7 @@ export default {
         flatmapAPI: process.env.VUE_APP_FLATMAPAPI_LOCATION,
         nlLinkPrefix: process.env.VUE_APP_NL_LINK_PREFIX,
         rootUrl: process.env.VUE_APP_ROOT_URL,
+        queryUrl: process.env.VUE_APP_QUERY_URL,
       }
     }
   },
@@ -103,6 +112,15 @@ export default {
       xmlhttp.send(JSON.stringify({"state": state}));
 
     },
+    setFlatmap: function() {
+      this.$refs.map.setCurrentEntry(
+        {
+          type: "Flatmap",
+          resource: "FunctionalConnectivity",
+          label: "Functional"
+        }
+      );
+    },
     setLegacyMultiFlatmap: function() {
       this.$refs.map.setCurrentEntry(
         {
@@ -118,7 +136,8 @@ export default {
           type: "MultiFlatmap",
           taxo: "NCBITaxon:9606",
           biologicalSex: "PATO:0000384",
-          organ: "heart"
+          //organ: "heart"
+          organ: "UBERON:0018675"
         }
       );
     },
@@ -135,6 +154,9 @@ export default {
     setSearch: function() {
       this.$refs.map.openSearch([], "10.26275/1uno-tynt");
     },
+    mapIsReady: function() {
+      console.log("map is ready")
+    }
   },
   created: function() {
     this.uuid = this.$route.query.id;
@@ -155,12 +177,6 @@ export default {
       }
       xmlhttp.send(JSON.stringify({"uuid": this.uuid}));
     }
-  },
-  mounted: function() {
-    //this.setMultiFlatmap();
-    //this.setScaffold();
-    //window.map = this.$refs.map
-    //this.setSearch();
   },
 }
 </script>
