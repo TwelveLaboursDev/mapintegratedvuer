@@ -1,6 +1,6 @@
 {
   "name": "@12-labours/mapintegratedvuer",
-  "version": "1.0.0-beta.9",
+  "version": "1.0.0-beta.12",
   "license": "Apache-2.0",
   "scripts": {
     "serve": "vue-cli-service serve --port 8081",
@@ -40,7 +40,7 @@
     "@abi-software/simulationvuer": "^0.6.5",
     "@abi-software/svg-sprite": "^0.3.0",
     "@soda/get-current-script": "^1.0.2",
-    "core-js": "^3.3.2",
+    "core-js": "^3.30.1",
     "d3-time-format": "^3.0.0",
     "element-ui": "^2.13.0",
     "es6-promise": "^4.2.8",
