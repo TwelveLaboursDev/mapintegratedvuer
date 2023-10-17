@@ -14,6 +14,7 @@
         :state="stateToSet"
         ref="flow"
         @hook:mounted="flowMounted"
+        @species-changed="speciesChanged"
       />
     </div>
 </template>
@@ -209,6 +210,9 @@ export default {
     },
     flowMounted: function () {
       this.$emit("isReady");
+    },
+    speciesChanged: function(species) {
+      this.$emit('species-changed', species);
     },
   },
   computed: {

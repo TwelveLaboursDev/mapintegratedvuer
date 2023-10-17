@@ -27,7 +27,16 @@
       <el-button icon="el-icon-setting" slot="reference">Options</el-button>
     </el-popover>
     <div class="map-app">
-      <MapContent ref="map" :startingMap="startingMap" :options="options" :state="state" :shareLink="shareLink" @updateShareLinkRequested="updateUUID" @isReady="mapIsReady"/>
+      <MapContent
+        ref="map"
+        :startingMap="startingMap"
+        :options="options"
+        :state="state"
+        :shareLink="shareLink"
+        @updateShareLinkRequested="updateUUID"
+        @isReady="mapIsReady"
+        @species-changed="speciesChanged"
+      />
     </div>
   </div>
 </template>
@@ -156,7 +165,10 @@ export default {
     },
     mapIsReady: function() {
       console.log("map is ready")
-    }
+    },
+    speciesChanged: function(species) {
+      this.$refs.map.openSearch([], species);
+    },
   },
   created: function() {
     this.uuid = this.$route.query.id;

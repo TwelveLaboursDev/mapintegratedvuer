@@ -82,6 +82,7 @@ export default {
     },
     speciesChanged: function (species) {
       this.activeSpecies = species;
+      this.$emit("species-changed", species);
     },
     /**
      * Perform a local search on this contentvuer
