@@ -26,6 +26,7 @@
           ref="splitdialog"
           @close="dialogClose(id)"
           @resource-selected="resourceSelected"
+          @species-changed="speciesChanged"
         />
         <SideBar
           ref="sideBar"
@@ -320,6 +321,9 @@ export default {
       if (store.state.splitFlow.globalCallback) {
         this.$refs.splitdialog.sendSynchronisedEvent(result);
       }
+    },
+    speciesChanged: function(species) {
+      this.$emit('species-changed', species);
     },
     tabClicked: function (id) {
       this.activeDockedId = id;
