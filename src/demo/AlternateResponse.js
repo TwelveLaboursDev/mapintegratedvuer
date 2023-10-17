@@ -1,8 +1,9 @@
 /* eslint-disable no-alert, no-console */
+import axios from "axios";
 const searchDataset = async (payload, callback) => {
+  let data = {};
   let search = "";
   let allFilter = {};
-  let data = {};
 
   if (payload.query) {
     search = payload.query;
@@ -19,24 +20,26 @@ const searchDataset = async (payload, callback) => {
       }
     }
   }
+  let url = `${payload.queryUrl}/graphql/pagination?search=${search}`;
   let postPayload = {
     filter: allFilter,
     limit: payload.numberPerPage,
     page: payload.page,
   };
-  let url = `${payload.queryUrl}/graphql/pagination/?search=${search}`;
-  await fetch(url, {
-    method: "POST", // *GET, POST, PUT, DELETE, etc.
-    headers: {
-      Accept: "application.json",
-      "Content-Type": "application/json",
-      Authorization: "Bearer undefined",
-    },
-    body: JSON.stringify(postPayload), // body data type must match "Content-Type" header
-    Cache: "default",
-  })
-    .then((response) => response.json())
-    .then((json) => (data = json));
+
+  await axios
+    .post(url, postPayload, {
+      headers: {
+        Authorization: "Bearer undefined",
+      },
+    })
+    .then((res) => {
+      data = res.data;
+      localStorage.setItem("one_off_token", res.headers["x-one-off"]);
+    })
+    .catch((err) => {
+      console.log(err);
+    });
 
   const searchData = data;
   callback(searchData);
@@ -44,23 +47,44 @@ const searchDataset = async (payload, callback) => {
 
 const getFacets = async (payload, callback) => {
   let facet = {};
-  let url = `${payload.queryUrl}/filter/?sidebar=true`;
-  await fetch(url, {
-    method: "GET", // *GET, POST, PUT, DELETE, etc.
-    headers: {
-      Accept: "application.json",
-      "Content-Type": "application/json",
-      Authorization: "Bearer undefined",
-    },
-    Cache: "default",
-  })
-    .then((response) => response.json())
-    .then((json) => (facet = json));
+  let url = `${payload.queryUrl}/filter?sidebar=true`;
+
+  await axios
+    .get(url, {
+      headers: {
+        Authorization: "Bearer undefined",
+      },
+    })
+    .then((res) => {
+      facet = res.data;
+    })
+    .catch((err) => {
+      console.log(err);
+    });
+
   const facets = facet;
   const returnedPayload = {
     data: facets,
   };
   callback(returnedPayload);
+};
+
+const getOneOffToken = async (payload, callback) => {
+  let url = `${payload.queryUrl}/access/oneoff`;
+
+  await axios
+    .get(url, {
+      headers: {
+        Authorization: "Bearer undefined",
+      },
+    })
+    .then((res) => {
+      localStorage.setItem("one_off_token", res.data.one_off_token);
+    })
+    .catch((err) => {
+      console.log(err);
+    });
+  callback();
 };
 
 export const mySearch = (payload, callback) => {
@@ -70,6 +94,8 @@ export const mySearch = (payload, callback) => {
       return;
     } else if (payload.requestType == "getFacets") {
       getFacets(payload, callback);
+    } else if (payload.requestType == "getToken") {
+      getOneOffToken(payload, callback);
     }
   }
 };
